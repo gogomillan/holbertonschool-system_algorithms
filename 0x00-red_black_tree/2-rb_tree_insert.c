@@ -1,215 +1,162 @@
 #include "rb_trees.h"
 
-#define IS_RED(node)	(node != NULL && node->color == RED)
-
-void repair_red_violation(
-	rb_tree_t *q, rb_tree_t *p, rb_tree_t *t, rb_tree_t *g, int last);
-
 /**
- * rb_tree_insert - insert a node into an RB tree using a topdown approach
- *
- * @tree: pointer to root node of tree
- * @n: data to insert
- *
- * Return: node inserted
+ * rotate - rote a segment of a Btree
+ * @node: node to rotate
+ * @left_or_right: sense of the rotate (1 right, 0 left)
+ * Return: nothing
  */
-rb_tree_t *rb_tree_insert(rb_tree_t **tree, int n)
+void rotate(rb_tree_t *node, int left_or_right)
 {
-	rb_tree_t *ret, *root;
+	rb_tree_t *rot_new = NULL, *parent = GETPARENT(node);
 
-	root = *tree;
-	ret = NULL;
-	if (root == NULL)
+	rot_new = left_or_right ? node->left : node->right;
+	if (left_or_right)
 	{
-		/* Empty tree case */
-		root = rb_tree_node(NULL, n, BLACK);
-		*tree = root;
-		ret = root;
+		node->left = rot_new->right;
+		rot_new->right = node;
+		node->parent = rot_new;
 
-		return (ret);
+		/* Handle other child/parent pointers. */
+		if (node->left)
+			node->left->parent = node;
+		/* Initially n could be the root. */
+		if (parent)
+		{
+			if (node == parent->left)
+				parent->left = rot_new;
+			else if (node == parent->right)
+				parent->right = rot_new;
+		}
 	}
 	else
 	{
-		rb_tree_t head = { 0 }; /* False tree root */
+		node->right = rot_new->left;
+		rot_new->left = node;
+		node->parent = rot_new;
 
-		rb_tree_t *g, *t;     /* Grandparent & parent */
-		rb_tree_t *p, *q;     /* Iterator & parent */
-		int dir = 0, last;
-
-		/* Set up helpers */
-		t = &head;
-		g = p = NULL;
-		q = t->right = root;
-
-		/* Search down the tree */
-		for (;;)
+		/* Handle other child/parent pointers. */
+		if (node->right)
+			node->right->parent = node;
+		/* Initially n could be the root. */
+		if (parent)
 		{
-			if (q == NULL)
-			{
-				/* Insert new node at the bottom */
-				if (dir)
-				{
-					p->right = q = rb_tree_node(p, n, RED);
-					ret = p->right;
-				}
-				else
-				{
-					p->left = q = rb_tree_node(p, n, RED);
-					ret = p->left;
-				}
-
-				if (q == NULL)
-					return (q);
-			}
-			else if (IS_RED(q->left) && IS_RED(q->right))
-			{
-				/* Color flip */
-				q->color = RED;
-				q->left->color = BLACK;
-				q->right->color = BLACK;
-			}
-
-			repair_red_violation(q, p, t, g, last);
-
-			/* Stop if found */
-			if (q && q->n == n)
-				break;
-
-			last = dir;
-			dir = q->n < n;
-
-			/* Update helpers */
-			if (g != NULL)
-				t = g;
-
-			g = p, p = q;
-			if (dir)
-				q = q->right;
-			else
-				q = q->left;
+			if (node == parent->left)
+				parent->left = rot_new;
+			else if (node == parent->right)
+				parent->right = rot_new;
 		}
-
-		/* Update root */
-		*tree = head.right;
 	}
-
-	/* Make root black */
-	root->color = BLACK;
-
-	return (ret);
+	rot_new->parent = parent;
 }
 
-
 /**
- * repair_red_violation - fix the red violations created from inserting
- *
- * @q: current node
- * @p: parent node
- * @t: great-grandparent
- * @g: grandparents
- * @last: last direction
+ * insert_value_recursive - insert a value in a RED_BLACK tree recursively
+ * @root: root node of the RED-BLACK tree
+ * @value: number to be insert
+ * Return: A pointer with the node inserted, NULL otherwise
  */
-void repair_red_violation(
-	rb_tree_t *q, rb_tree_t *p, rb_tree_t *t, rb_tree_t *g, int last)
+rb_tree_t *insert_value_recursive(rb_tree_t *root, int value)
 {
-	if (IS_RED(q) && IS_RED(p))
-	{
-		int dir2 = t->right == g;
+	rb_tree_t *new_node = NULL;
 
-		if (last)
+	if (root)
+	{
+		if (value < root->n)
 		{
-			if (q == p->right)
-			{
-				if (dir2)
-					t->right = single_rotate_color_swap(g, !last, COLOR_SWAP);
-				else
-					t->left = single_rotate_color_swap(g, !last, COLOR_SWAP);
-			}
-			else
-			{
-				if (dir2)
-					t->right = double_rotate(g, !last);
-				else
-					t->left = double_rotate(g, !last);
-			}
+			if (root->left)
+				return (insert_value_recursive(root->left, value));
+
+			new_node = rb_tree_node(root, value, RED);
+			if (!new_node)
+				return (NULL);
+			root->left = new_node;
+		}
+		else if (value > root->n)
+		{
+			if (root->right)
+				return (insert_value_recursive(root->right, value));
+
+			new_node = rb_tree_node(root, value, RED);
+			if (!new_node)
+				return (NULL);
+			root->right = new_node;
 		}
 		else
+			return (NULL);
+	}
+	return (new_node);
+}
+
+/**
+ * repair_rb_tree - make back a RB Tree
+ * @node: node where starting the fixing
+ * Return: Nothing
+ */
+void repair_rb_tree(rb_tree_t *node)
+{
+	rb_tree_t *parent = NULL, *grand_pa = NULL;
+
+	if (!GETPARENT(node))
+		node->color = BLACK;
+	else if (GETPARENT(node)->color == BLACK)
+		return;
+	else if (GETUNCLE(node) && (GETUNCLE(node))->color == RED)
+	{
+		GETPARENT(node)->color = BLACK, GETUNCLE(node)->color = BLACK;
+		GETGRANDPARENT(node)->color = RED;
+		repair_rb_tree(GETGRANDPARENT(node));
+	}
+	else
+	{
+		parent = GETPARENT(node);
+		grand_pa = GETGRANDPARENT(node);
+
+		if (node == parent->right && parent == grand_pa->left)
 		{
-			if (q == p->left)
-			{
-				if (dir2)
-					t->right = single_rotate_color_swap(g, !last, COLOR_SWAP);
-				else
-					t->left = single_rotate_color_swap(g, !last, COLOR_SWAP);
-			}
-			else
-			{
-				if (dir2)
-					t->right = double_rotate(g, !last);
-				else
-					t->left = double_rotate(g, !last);
-			}
+			rotate(parent, 0);
+			node = node->left;
 		}
+		else if (node == parent->left && parent == grand_pa->right)
+		{
+			rotate(parent, 1);
+			node = node->right;
+		}
+
+		parent = GETPARENT(node);
+		grand_pa = GETGRANDPARENT(node);
+
+		if (node == parent->left)
+			rotate(grand_pa, 1);
+		else
+			rotate(grand_pa, 0);
+		parent->color = BLACK, grand_pa->color = RED;
 	}
 }
 
-
-
 /**
- * single_rotate - rotate a binary tree from a given @root
- *
- * @root: root to rotate
- * @direction: direction to rotate. 1 is right, 0 is left
- * @color_swap: if COLOR_SWAP (1) is set, swap the root and new root colors
- *
- * Return: the new root after rotation
+ * rb_tree_insert - insert a given value in a Red_black tree
+ * @tree: root of the binary tree
+ * @value: number to insert in the Red_black tree
+ * Return: The pointer of the new node inserted on success, NULL otherwise
  */
-rb_tree_t *single_rotate_color_swap(
-	rb_tree_t *root, int direction, int color_swap)
+rb_tree_t *rb_tree_insert(rb_tree_t **tree, int value)
 {
-	rb_tree_t *tmp;
+	rb_tree_t *new_node = NULL, *new_root = NULL;
 
-	if (direction)
-	{
-		tmp = root->left;
-		root->left = tmp->right;
-		tmp->right = root;
-		tmp->parent = root->parent;
-		root->parent = tmp;
-	}
-	else
-	{
-		tmp = root->right;
-		root->right = tmp->left;
-		tmp->left = root;
-		tmp->parent = root->parent;
-		root->parent = tmp;
-	}
-	if (color_swap)
-	{
-		root->color = RED;
-		tmp->color = BLACK;
-	}
-	return (tmp);
-}
+	if (!*tree)
+		return (*tree = rb_tree_node(NULL, value, BLACK));
 
-/**
- * double_rotate - rotate a binary tree from a given @root twice. This is
- * used specifically when there is an inner child of a node that needs to
- * be rotated, and needs to be moved to the outside before the proper
- * rotation can be performed.
- *
- * @root: root to rotate
- * @direction: direction to rotate. 1 is right, 0 is left
- *
- * Return: the new root after rotation
- */
-rb_tree_t *double_rotate(rb_tree_t *root, int direction)
-{
-	if (direction)
-		root->left = single_rotate_color_swap(root->left, !direction, NO_COLOR_SWAP);
-	else
-		root->right = single_rotate_color_swap(
-			root->right, !direction, NO_COLOR_SWAP);
-	return (single_rotate_color_swap(root, direction, COLOR_SWAP));
+	new_node = insert_value_recursive(*tree, value);
+	if (!new_node)
+		return (NULL);
+
+	repair_rb_tree(new_node);
+
+	new_root = new_node;
+	while (GETPARENT(new_root) != NULL)
+		new_root = GETPARENT(new_root);
+	*tree = new_root;
+
+	return (new_node);
 }

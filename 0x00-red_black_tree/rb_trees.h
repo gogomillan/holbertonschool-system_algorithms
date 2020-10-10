@@ -73,4 +73,23 @@ rb_tree_t *single_rotate(rb_tree_t *root, int direction);
 rb_tree_t *double_rotate(rb_tree_t *root, int direction);
 int is_red(rb_tree_t *node);
 
+#define GETPARENT(node) ((node == NULL) ? NULL : node->parent)
+#define GETGRANDPARENT(node) GETPARENT(GETPARENT(node))
+#define GETSIBLING(node) \
+	(GETPARENT(node) ? \
+	((node == (GETPARENT(node)->left)) ? \
+	(GETPARENT(node)->right) : \
+	(GETPARENT(node)->left)) : \
+	NULL)
+#define GETUNCLE(node) GETSIBLING(GETPARENT(node))
+#define D_BLACK(node, succesor) \
+	((succesor == NULL || \
+	succesor->color == BLACK) && \
+	(node->color == BLACK))
+#define SIBLING_RED(sibling) \
+	((sibling->left && \
+	sibling->left == RED) || \
+	(sibling->right && \
+	sibling->right == RED))
+
 #endif /* _RB_TREES_H_ */
