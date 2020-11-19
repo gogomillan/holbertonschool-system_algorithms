@@ -97,15 +97,16 @@ vertex_t *get_vertex_index(const graph_t *graph, size_t index)
 size_t breadth_first_traverse(const graph_t *graph,
 			      void (*action)(const vertex_t *v, size_t breadth))
 {
-	size_t breadth = 0, *visited; int index = 0;
-	vertex_t *curr, *dest;	edge_t *edge; queue_t *q;
+	size_t breadth = 0, *visited;
+	int index = 0;
+	vertex_t *curr, *dest;
+	edge_t *edge;
+	queue_t *q;
 
 	if (graph == NULL || graph->nb_vertices == 0 || graph->vertices == NULL)
 		return (0);
-	visited = calloc(graph->nb_vertices, sizeof(size_t));
-	q = createqueue_t();
-	curr = graph->vertices;
-	enqueue(q, curr->index);	enqueue(q, LEVELBREAK);
+	visited = calloc(graph->nb_vertices, sizeof(size_t)), q = createqueue_t();
+	curr = graph->vertices, enqueue(q, curr->index), enqueue(q, LEVELBREAK);
 	while (q->rear != -1)
 	{
 		index = dequeue(q, 0);
@@ -127,14 +128,11 @@ size_t breadth_first_traverse(const graph_t *graph,
 			{
 				dest = edge->dest;
 				if (dest && visited[dest->index] == UNEXPLORED)
-				{
-					enqueue(q, dest->index);
-					visited[dest->index] = BACKTRACK;
-				}
+					enqueue(q, dest->index), visited[dest->index] = BACKTRACK;
 				edge = edge->next;
 			}
 		}
 	}
-	free(visited);	free(q);
+	free(visited), free(q);
 	return (breadth - 1);
 }
