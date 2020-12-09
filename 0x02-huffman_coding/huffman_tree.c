@@ -16,6 +16,9 @@ binary_tree_node_t *huffman_tree(char *data, size_t *freq, size_t size)
 	heap_t *heap;
 	int ret;
 
+	if (data == NULL || freq == NULL || size <= 0)
+		return (NULL);
+
 	heap = huffman_priority_queue(data, freq, size);
 	while (heap->root->right || heap->root->left)
 	{
