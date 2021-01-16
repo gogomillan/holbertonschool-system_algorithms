@@ -1,29 +1,18 @@
-OUTPUT	=	huffman
-OBJECTS	=	main.c \
-		compress.c \
-		decompress.c \
-		../binary_tree_print.c \
-		../heap/heap.h \
-		../heap/binary_tree_node.c \
-		../heap/heap_create.c \
-		../heap/heap_delete.c \
-		../heap/heap_extract.c \
-		../heap/heap_insert.c \
-		../heap/heap_ops.c \
-		../huffman.h \
-		../huffman_extract_and_insert.c \
-		../huffman_priority_queue.c \
-		../huffman_tree.c \
-		../huffman_codes.c \
-		../symbol.c \
+SRC =	$(shell find . -name "*.c") \
+	$(shell find .. -name "*.c")
+OBJ =	$(SRC:.c=.o)
 
 
-$(OUTPUT): $(OBJECTS)
-		gcc -I./ -Iheap/ -I../heap/ -g3 -o $@ $^
+CC =	gcc
+FLAGS=	-Wall -Werror -Wextra -pedantic -g3
+
+huffman: $(OBJ)
+	$(CC) $^ $(FLAGS) -o huffman
+
+%o: %.c
+	@$(CC) -c -I. -Iheap $< $(FLAGS) -o $@ 
 
 
-.PHONEY:	clean
-
-
+.PHONY: clean
 clean:
-		rm -f $(OUTPUT)
+	rm -f $(OBJ) huffman
